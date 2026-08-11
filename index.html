@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDV Entregas Móvil</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { color: #6b7280; font-weight: 500; border-bottom: 3px solid transparent; }
+        /* Animaciones para modales y notificaciones */
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        .slide-up { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        /* Ajuste para el escáner de QR */
+        #reader { width: 100%; border-radius: 0.75rem; overflow: hidden; border: none !important; }
+        #reader video { object-fit: cover; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Indicador de Red -->
+    <div id="network-status" class="hidden w-full bg-red-500 text-white text-xs font-bold text-center py-1 transition-all">
+        Sin conexión. Guardando localmente.
+    </div>
+
+    <!-- Contenedor de Alertas (Toasts) -->
+    <div id="toast-container" class="fixed top-4 left-0 right-0 z-50 flex flex-col items-center space-y-2 pointer-events-none"></div>
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-screen" class="absolute inset-0 z-40 bg-gray-50 flex flex-col justify-center items-center p-6">
+        <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm">
+            <div class="flex justify-center mb-6">
+                <div class="bg-blue-600 p-3 rounded-full text-white">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-2">PDV Entregas</h1>
+            <p class="text-sm text-center text-gray-500 mb-6">Ingresa para continuar</p>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Usuario</label>
+                    <input type="text" id="login-username" class="w-full rounded-xl border-gray-300 border py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" required placeholder="Ej. admin">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Contraseña o PIN</label>
+                    <input type="password" id="login-pin" class="w-full rounded-xl border-gray-300 border py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" required placeholder="••••">
+                </div>
+                <button type="submit" id="btn-login" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 active:scale-95 transition shadow-md mt-4">
+                    Ingresar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APLICACIÓN PRINCIPAL -->
+    <div id="app-container" class="hidden flex-1 flex flex-col h-full relative">
+        
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex justify-between items-center z-10 shrink-0">
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 p-1.5 rounded-lg text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-gray-800 leading-tight">Entregas</h1>
+                    <p id="user-display" class="text-xs text-gray-500">Cargando...</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="btn-logout" class="text-gray-400 hover:text-red-500 p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navegación por Pestañas -->
+        <div id="main-tabs" class="bg-white border-b border-gray-200 flex text-center shrink-0">
+            <button id="tab-pending" class="flex-1 py-3 text-sm tab-active transition-colors">Mis Entregas</button>
+            <button id="tab-admin" class="hidden flex-1 py-3 text-sm tab-inactive transition-colors">Panel Control</button>
+        </div>
+
+        <!-- Área de Contenido Desplazable -->
+        <main class="flex-1 overflow-y-auto p-4 pb-24 relative">
+            
+            <!-- VISTA: MIS ENTREGAS -->
+            <div id="view-pending" class="space-y-4">
+                
+                <!-- Buscador de Guías -->
+                <div class="flex space-x-2">
+                    <div class="relative flex-1">
+                        <input type="text" id="search-pending" placeholder="Buscar código..." class="w-full rounded-xl border-gray-300 border py-3 px-10 focus:ring-2 focus:ring-blue-500 uppercase font-mono text-sm bg-white shadow-sm outline-none transition-colors">
+                        <svg class="w-5 h-5 absolute left-3 top-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <button type="button" id="btn-scan-search" class="bg-gray-800 text-white px-4 rounded-xl shadow-sm flex items-center justify-center hover:bg-gray-700 active:scale-95 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5v2a1 1 0 01-2 0V4zm14-1a1 1 0 011 1v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3zM3 20a1 1 0 011-1h4a1 1 0 110 2H5v-2a1 1 0 01-2 0v-3a1 1 0 112 0v2zm14 1a1 1 0 01-1-1v-3a1 1 0 112 0v3h-2a1 1 0 110 2z"></path></svg>
+                    </button>
+                </div>
+
+                <div id="pending-list" class="space-y-3">
+                    <!-- Los paquetes pendientes se inyectan aquí -->
+                    <div class="text-center py-8 text-gray-400">
+                        <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        <p>Cargando paquetes...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: PANEL DE ADMINISTRADOR -->
+            <div id="view-admin" class="hidden space-y-4">
+                <!-- Sub-pestañas de Admin -->
+                <div class="flex space-x-2 bg-gray-200 p-1 rounded-lg">
+                    <button id="subtab-assign" class="flex-1 py-2 text-sm font-bold bg-white rounded-md shadow-sm text-gray-800">Asignar</button>
+                    <button id="subtab-users" class="flex-1 py-2 text-sm font-bold text-gray-500 hover:text-gray-800">Usuarios</button>
+                </div>
+
+                <!-- Sub-vista: Asignar Paquetes -->
+                <div id="admin-view-assign" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Colaborador:</label>
+                        <select id="assign-user-select" class="w-full rounded-lg border-gray-300 border py-3 px-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></select>
+                    </div>
+                    
+                    <!-- Toggle de Fotografía -->
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <label class="block text-xs font-bold text-blue-800 mb-2">Requisito de Fotografía:</label>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center text-sm font-medium text-gray-700"><input type="radio" id="photo-req-no" name="assign-photo-req" value="no" checked class="mr-2"> No incluir</label>
+                            <label class="flex items-center text-sm font-medium text-gray-700"><input type="radio" id="photo-req-yes" name="assign-photo-req" value="yes" class="mr-2"> Tomar Foto</label>
+                        </div>
+                    </div>
+
+                    <!-- Ingreso de Guías -->
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Escanea o ingresa guía:</label>
+                        <div class="flex space-x-2">
+                            <input type="text" id="assign-single-code" class="flex-1 rounded-lg border-gray-300 border py-3 px-3 uppercase font-mono text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. TRK-123">
+                            <button type="button" id="btn-scan-assign-code" class="bg-gray-800 text-white px-3 rounded-lg flex items-center justify-center hover:bg-gray-700 active:scale-95 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5v2a1 1 0 01-2 0V4zm14-1a1 1 0 011 1v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3zM3 20a1 1 0 011-1h4a1 1 0 110 2H5v-2a1 1 0 01-2 0v-3a1 1 0 112 0v2zm14 1a1 1 0 01-1-1v-3a1 1 0 112 0v3h-2a1 1 0 110 2z"></path></svg>
+                            </button>
+                            <button type="button" id="btn-add-assign-code" class="bg-blue-100 text-blue-700 font-bold px-4 rounded-lg active:scale-95 transition flex items-center">
+                                Añadir
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <input type="file" id="assign-staged-camera" accept="image/*" capture="environment" class="hidden">
+                    
+                    <div id="assign-staged-list" class="space-y-2 max-h-48 overflow-y-auto pt-2"></div>
+
+                    <button id="btn-assign-package" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-md flex justify-center items-center mt-2 transition active:scale-95">
+                        Asignar Guías (0)
+                    </button>
+                </div>
+
+                <!-- Sub-vista: Gestión de Usuarios -->
+                <div id="admin-view-users" class="hidden bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
+                    <h3 class="font-bold text-sm text-gray-800">Crear Colaborador</h3>
+                    <div class="space-y-3">
+                        <input type="text" id="new-username" placeholder="Nombre (Ej. Juan)" class="w-full rounded-lg border-gray-300 border py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="new-pin" placeholder="PIN o Contraseña" class="w-full rounded-lg border-gray-300 border py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="btn-create-user" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition shadow active:scale-95">Crear Usuario</button>
+                    </div>
+                    <hr class="my-4">
+                    <h3 class="font-bold text-sm text-gray-800">Usuarios Registrados</h3>
+                    <div id="users-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE ENTREGA -->
+    <div id="delivery-modal" class="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex justify-center items-end hidden">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-8 slide-up">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">Completar Entrega</h3>
+                <button type="button" id="btn-close-delivery" class="text-gray-400 hover:text-gray-600 p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <p id="delivery-package-code" class="text-sm font-mono bg-gray-100 p-2 rounded text-center mb-4 font-bold"></p>
+
+            <form id="delivery-form" class="space-y-4">
+                <input type="hidden" id="delivery-id">
+                
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Recibe:</label>
+                    <input type="text" id="delivery-name" class="w-full rounded-xl border-gray-300 border py-3 px-4 focus:ring-2 focus:ring-blue-500 outline-none" required placeholder="Nombre de quien recibe">
+                    <div class="mt-2 flex flex-wrap gap-2" id="quick-names-container">
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full border border-gray-200 active:scale-95 cursor-pointer" onclick="document.getElementById('delivery-name').value = this.innerText">Familiar</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full border border-gray-200 active:scale-95 cursor-pointer" onclick="document.getElementById('delivery-name').value = this.innerText">Seguridad/Recepción</span>
+                        <span class="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full border border-gray-200 active:scale-95 cursor-pointer" onclick="document.getElementById('delivery-name').value = this.innerText">Titular</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Evidencia Fotográfica:</label>
+                    <button type="button" id="btn-open-camera" class="w-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl border-2 border-dashed border-gray-300 transition active:scale-95">
+                        <svg class="w-6 h-6 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                        Abrir Cámara
+                    </button>
+                    <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+                    
+                    <div id="photo-preview-container" class="hidden relative mt-2">
+                        <img id="photo-preview" src="" class="w-full h-48 object-cover rounded-xl border border-gray-200 shadow-sm">
+                        <button type="button" id="btn-retake-photo" class="absolute top-2 right-2 bg-gray-900 bg-opacity-75 text-white rounded-full p-2 hover:bg-gray-800 shadow">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                        <input type="hidden" id="photo-data" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-submit-delivery" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 shadow-lg active:scale-95 transition mt-2">
+                    Finalizar Entrega
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE ESCÁNER DE CÓDIGOS -->
+    <div id="scanner-modal" class="fixed inset-0 z-50 bg-black flex flex-col hidden fade-in">
+        <div class="flex justify-between items-center p-4 bg-gray-900 text-white shrink-0">
+            <h3 class="font-bold">Escanear Código</h3>
+            <button type="button" id="btn-close-scanner" class="p-2 bg-gray-800 rounded-full">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="flex-1 relative flex items-center justify-center bg-black w-full h-full overflow-hidden">
+            <div id="reader" class="w-full max-w-md mx-auto"></div>
+        </div>
+        <div class="p-6 bg-gray-900 text-center text-gray-400 text-sm shrink-0">
+            Apunta la cámara al código de barras o QR de la guía.
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, getDocs, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- 1. CONFIGURACIÓN DE FIREBASE (TU BASE DE DATOS) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0v_mq27fcdGLPnbts_W9k6RTEaLTBEBg",
+            authDomain: "entregas-pdv.firebaseapp.com",
+            projectId: "entregas-pdv",
+            storageBucket: "entregas-pdv.firebasestorage.app",
+            messagingSenderId: "295593937864",
+            appId: "1:295593937864:web:fc16487e86d52a78088efd",
+            measurementId: "G-DWXPVR49WN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        // Habilitar caché offline nativa de Firebase (Súper potente)
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+        });
+
+        // Configuración de rutas obligatorias para el sistema
+        const APP_ID = 'entregas_pdv'; // Forzar el ID para que coincida con las reglas de Firebase
+        const usersCol = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
+        const packagesCol = collection(db, 'artifacts', APP_ID, 'public', 'data', 'packages');
+
+        // Variables Globales
+        let currentUser = null;
+        let html5QrCode = null;
+        let isOnline = navigator.onLine;
+        let allPackages = [];
+        let allUsers = [];
+
+        // --- 2. UTILIDADES DE INTERFAZ ---
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-xl shadow-lg text-white font-medium text-sm fade-in flex items-center ${type === 'error' ? 'bg-red-600' : type === 'warning' ? 'bg-orange-500' : 'bg-gray-800'}`;
+            toast.innerHTML = `<span class="mr-2">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span> ${message}`;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => { toast.classList.add('opacity-0', 'transition-opacity'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function updateNetworkStatus() {
+            isOnline = navigator.onLine;
+            const banner = document.getElementById('network-status');
+            if (isOnline) {
+                banner.classList.remove('hidden');
+                banner.className = 'w-full bg-green-500 text-white text-xs font-bold text-center py-1 transition-all';
+                banner.innerText = 'Conexión restaurada. Sincronizando...';
+                setTimeout(() => banner.classList.add('hidden'), 3000);
+            } else {
+                banner.classList.remove('hidden');
+                banner.className = 'w-full bg-red-500 text-white text-xs font-bold text-center py-1 transition-all';
+                banner.innerText = 'Sin conexión. Los datos se guardarán localmente.';
+            }
+        }
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+
+        // --- 3. AUTENTICACIÓN Y SESIÓN ---
+        async function initAuth() {
+            try {
+                // Crear admin por defecto si no existe
+                const adminRef = doc(usersCol, 'admin');
+                const adminDoc = await getDoc(adminRef);
+                if (!adminDoc.exists()) {
+                    await setDoc(adminRef, { username: 'admin', pin: 'admin123', role: 'admin' });
+                }
+            } catch (error) {
+                console.error("Error inicializando base de datos", error);
+            }
+        }
+        initAuth();
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userIn = document.getElementById('login-username').value.trim().toLowerCase();
+            const pinIn = document.getElementById('login-pin').value.trim();
+            const btn = document.getElementById('btn-login');
+            
+            btn.innerText = "Verificando..."; btn.disabled = true;
+
+            try {
+                const userDoc = await getDoc(doc(usersCol, userIn));
+                if (userDoc.exists() && userDoc.data().pin === pinIn) {
+                    currentUser = userDoc.data();
+                    startApp();
+                } else {
+                    showToast("Usuario o contraseña incorrectos", "error");
+                    btn.innerText = "Ingresar"; btn.disabled = false;
+                }
+            } catch (error) {
+                showToast("Error al conectar", "error");
+                btn.innerText = "Ingresar"; btn.disabled = false;
+            }
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            currentUser = null;
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-pin').value = '';
+            document.getElementById('btn-login').innerText = "Ingresar";
+            document.getElementById('btn-login').disabled = false;
+        });
+
+        function startApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('user-display').innerText = `Hola, ${currentUser.username.toUpperCase()}`;
+            
+            if (currentUser.role === 'admin') {
+                document.getElementById('tab-admin').classList.remove('hidden');
+            } else {
+                document.getElementById('tab-admin').classList.add('hidden');
+                document.getElementById('tab-pending').click();
+            }
+            
+            loadDataListeners();
+        }
+
+        // --- 4. CARGA DE DATOS EN TIEMPO REAL ---
+        function loadDataListeners() {
+            // Escuchar Usuarios (Para listados y selector)
+            onSnapshot(usersCol, (snapshot) => {
+                allUsers = [];
+                snapshot.forEach(doc => allUsers.push(doc.data()));
+                renderUsersAdmin();
+                renderAssignUserSelect();
+            }, (error) => console.error("Error users", error));
+
+            // Escuchar Paquetes
+            onSnapshot(packagesCol, (snapshot) => {
+                allPackages = [];
+                snapshot.forEach(doc => allPackages.push(doc.data()));
+                renderPendingPackages();
+            }, (error) => console.error("Error packages", error));
+        }
+
+        // --- 5. LÓGICA DE MIS ENTREGAS ---
+        function renderPendingPackages(filterCode = '') {
+            const list = document.getElementById('pending-list');
+            list.innerHTML = '';
+            
+            // Filtrar paquetes del usuario actual, que estén pendientes, y coincidan con búsqueda
+            let myPackages = allPackages.filter(p => p.assignedTo === currentUser.username && p.status === 'pending');
+            
+            if (filterCode) {
+                myPackages = myPackages.filter(p => p.code.includes(filterCode));
+                if (myPackages.length === 0) {
+                    list.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl border border-red-200 text-sm text-center font-bold">❌ No cuentas con la guía: ${filterCode}</div>`;
+                    return;
+                }
+            }
+
+            if (myPackages.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-gray-400"><svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg><p>¡Excelente! No tienes entregas pendientes.</p></div>`;
+                return;
+            }
+
+            myPackages.sort((a, b) => b.assignedAt - a.assignedAt).forEach(pkg => {
+                const date = new Date(pkg.assignedAt).toLocaleString('es-MX', {day: '2-digit', month: 'short', hour: '2-digit', minute:'2-digit'});
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center active:bg-gray-50 transition cursor-pointer";
+                div.onclick = () => openDeliveryModal(pkg);
+                div.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-blue-100 p-2 rounded-lg">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-base uppercase font-mono">${pkg.code}</h3>
+                            <p class="text-xs text-gray-500">Asignado: ${date}</p>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        document.getElementById('search-pending').addEventListener('input', (e) => {
+            renderPendingPackages(e.target.value.trim().toUpperCase());
+        });
+
+        // --- 6. CÁMARA Y MODAL DE ENTREGA ---
+        const cameraInput = document.getElementById('camera-input');
+        const photoPreview = document.getElementById('photo-preview');
+        const photoPreviewContainer = document.getElementById('photo-preview-container');
+        const photoDataInput = document.getElementById('photo-data');
+        const btnOpenCamera = document.getElementById('btn-open-camera');
+
+        function openDeliveryModal(pkg) {
+            document.getElementById('delivery-id').value = pkg.id;
+            document.getElementById('delivery-package-code').innerText = "Guía: " + pkg.code;
+            document.getElementById('delivery-name').value = '';
+            
+            // Reset Foto
+            photoPreview.src = '';
+            photoDataInput.value = '';
+            photoPreviewContainer.classList.add('hidden');
+            btnOpenCamera.classList.remove('hidden');
+
+            document.getElementById('delivery-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('btn-close-delivery').addEventListener('click', () => {
+            document.getElementById('delivery-modal').classList.add('hidden');
+        });
+
+        btnOpenCamera.addEventListener('click', () => cameraInput.click());
+        document.getElementById('btn-retake-photo').addEventListener('click', () => cameraInput.click());
+
+        cameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const scaleSize = 800 / img.width; // Comprimir para envíos rápidos
+                    canvas.width = 800;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                    photoPreview.src = dataUrl;
+                    photoDataInput.value = dataUrl;
+                    photoPreviewContainer.classList.remove('hidden');
+                    btnOpenCamera.classList.add('hidden');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('delivery-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('delivery-id').value;
+            const name = document.getElementById('delivery-name').value.trim();
+            const photo = photoDataInput.value;
+
+            if (!photo) { showToast("La fotografía es obligatoria", "error"); return; }
+
+            const btn = document.getElementById('btn-submit-delivery');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            try {
+                // Al usar persistentLocalCache, esto se guarda offline al instante si no hay red
+                await updateDoc(doc(packagesCol, id), {
+                    status: 'delivered',
+                    receivedBy: name,
+                    deliveryPhoto: photo,
+                    deliveredAt: Date.now()
+                });
+                
+                showToast("Entrega Registrada Exitosamente");
+                document.getElementById('delivery-modal').classList.add('hidden');
+            } catch (error) {
+                showToast("Error al guardar entrega", "error");
+                console.error(error);
+            }
+            btn.innerText = "Finalizar Entrega"; btn.disabled = false;
+            document.getElementById('search-pending').value = ''; // Limpiar buscador
+        });
+
+        // --- 7. PANEL DE ADMINISTRADOR ---
+        function renderUsersAdmin() {
+            const list = document.getElementById('users-list');
+            list.innerHTML = '';
+            allUsers.forEach(u => {
+                list.innerHTML += `<div class="p-3 bg-gray-50 rounded border border-gray-200 text-sm">
+                    <span class="font-bold text-gray-700 capitalize">${u.username}</span> 
+                    <span class="text-gray-400 text-xs ml-2">${u.role === 'admin' ? '(Admin)' : ''}</span>
+                </div>`;
+            });
+        }
+
+        function renderAssignUserSelect() {
+            const select = document.getElementById('assign-user-select');
+            select.innerHTML = '';
+            allUsers.forEach(u => {
+                select.innerHTML += `<option value="${u.username}">${u.username.toUpperCase()}</option>`;
+            });
+        }
+
+        document.getElementById('btn-create-user').addEventListener('click', async () => {
+            const name = document.getElementById('new-username').value.trim().toLowerCase();
+            const pin = document.getElementById('new-pin').value.trim();
+            if(!name || !pin) { showToast("Completa los datos", "warning"); return; }
+            
+            try {
+                await setDoc(doc(usersCol, name), { username: name, pin: pin, role: 'colaborador' });
+                showToast("Usuario Creado");
+                document.getElementById('new-username').value = '';
+                document.getElementById('new-pin').value = '';
+            } catch(e) { showToast("Error creando usuario", "error"); }
+        });
+
+        // Lógica de Asignación por lotes (Uno a uno con opción de foto)
+        let stagedAssignments = [];
+        let pendingAssignCode = '';
+        const assignStagedCamera = document.getElementById('assign-staged-camera');
+        const photoReqNo = document.getElementById('photo-req-no');
+        const photoReqYes = document.getElementById('photo-req-yes');
+        const btnAddAssign = document.getElementById('btn-add-assign-code');
+
+        function updateAssignBtnUI() {
+            if (photoReqYes.checked) {
+                btnAddAssign.innerHTML = `<svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg> Foto`;
+                btnAddAssign.className = 'bg-green-100 text-green-700 font-bold px-4 rounded-lg hover:bg-green-200 transition flex items-center active:scale-95';
+            } else {
+                btnAddAssign.innerHTML = `Añadir`;
+                btnAddAssign.className = 'bg-blue-100 text-blue-700 font-bold px-4 rounded-lg hover:bg-blue-200 transition flex items-center active:scale-95';
+            }
+        }
+        photoReqNo.addEventListener('change', updateAssignBtnUI);
+        photoReqYes.addEventListener('change', updateAssignBtnUI);
+
+        document.getElementById('btn-add-assign-code').addEventListener('click', () => {
+            const code = document.getElementById('assign-single-code').value.trim().toUpperCase();
+            if(!code) return;
+
+            if(stagedAssignments.find(a => a.code === code)) {
+                showToast("Esta guía ya está en la lista.", "error"); return;
+            }
+
+            if(photoReqYes.checked) {
+                pendingAssignCode = code;
+                assignStagedCamera.click();
+            } else {
+                stagedAssignments.push({code: code, photo: null});
+                document.getElementById('assign-single-code').value = '';
+                renderStagedAssignments();
+            }
+        });
+        
+        document.getElementById('assign-single-code').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-add-assign-code').click(); }
+        });
+
+        assignStagedCamera.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const scaleSize = 800 / img.width;
+                    canvas.width = 800; canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    stagedAssignments.push({code: pendingAssignCode, photo: canvas.toDataURL('image/jpeg', 0.6)});
+                    pendingAssignCode = '';
+                    document.getElementById('assign-single-code').value = '';
+                    assignStagedCamera.value = '';
+                    renderStagedAssignments();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function renderStagedAssignments() {
+            const list = document.getElementById('assign-staged-list');
+            list.innerHTML = '';
+            stagedAssignments.forEach((item, index) => {
+                const photoIcon = item.photo ? `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>` : ``;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div class="flex items-center space-x-2"><span class="font-bold text-sm uppercase">${item.code}</span>${photoIcon}</div>
+                        <button type="button" onclick="window.removeStaged(${index})" class="text-red-500 p-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    </div>`;
+            });
+            document.getElementById('btn-assign-package').innerText = `Asignar Guías (${stagedAssignments.length})`;
+        }
+
+        window.removeStaged = (index) => { stagedAssignments.splice(index, 1); renderStagedAssignments(); };
+
+        document.getElementById('btn-assign-package').addEventListener('click', async () => {
+            if(stagedAssignments.length === 0) { showToast("No hay paquetes listos", "warning"); return; }
+            const username = document.getElementById('assign-user-select').value;
+            const btn = document.getElementById('btn-assign-package');
+            btn.innerHTML = 'Asignando...'; btn.disabled = true;
+            
+            try {
+                for (const item of stagedAssignments) {
+                    const newId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+                    const pkg = { id: newId, code: item.code, assignedTo: username, status: 'pending', assignedAt: Date.now() };
+                    if (item.photo) pkg.assignmentPhoto = item.photo;
+                    await setDoc(doc(packagesCol, pkg.id), pkg);
+                }
+                showToast(`Asignados ${stagedAssignments.length} paquetes a ${username}`);
+                stagedAssignments = []; renderStagedAssignments();
+            } catch(e) { showToast("Error al asignar", "error"); console.error(e); }
+            btn.disabled = false;
+        });
+
+        // --- 8. ESCÁNER DE CÓDIGOS BARRAS/QR ---
+        const scannerModal = document.getElementById('scanner-modal');
+        let scannerTarget = '';
+
+        function openScanner() {
+            scannerModal.classList.remove('hidden');
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } }, 
+                (decodedText) => {
+                    html5QrCode.stop().then(() => {
+                        scannerModal.classList.add('hidden');
+                        if (scannerTarget === 'search') {
+                            document.getElementById('search-pending').value = decodedText;
+                            renderPendingPackages(decodedText);
+                        } else if (scannerTarget === 'assign') {
+                            document.getElementById('assign-single-code').value = decodedText;
+                            if(photoReqYes.checked) showToast("Toca 'Foto' para adjuntar evidencia.");
+                            else document.getElementById('btn-add-assign-code').click();
+                        }
+                    });
+                }, (err) => {}
+            ).catch(err => { showToast("No se pudo iniciar cámara", "error"); scannerModal.classList.add('hidden'); });
+        }
+
+        document.getElementById('btn-scan-search').addEventListener('click', () => { scannerTarget = 'search'; openScanner(); });
+        document.getElementById('btn-scan-assign-code').addEventListener('click', () => { scannerTarget = 'assign'; openScanner(); });
+        document.getElementById('btn-close-scanner').addEventListener('click', () => {
+            if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop();
+            scannerModal.classList.add('hidden');
+        });
+
+        // --- 9. NAVEGACIÓN DE PESTAÑAS ---
+        const tabPending = document.getElementById('tab-pending');
+        const tabAdmin = document.getElementById('tab-admin');
+        const subtabAssign = document.getElementById('subtab-assign');
+        const subtabUsers = document.getElementById('subtab-users');
+        
+        tabPending.addEventListener('click', () => {
+            tabPending.className = 'flex-1 py-3 text-sm tab-active'; tabAdmin.className = 'flex-1 py-3 text-sm tab-inactive';
+            document.getElementById('view-pending').classList.remove('hidden'); document.getElementById('view-admin').classList.add('hidden');
+        });
+        tabAdmin.addEventListener('click', () => {
+            tabAdmin.className = 'flex-1 py-3 text-sm tab-active'; tabPending.className = 'flex-1 py-3 text-sm tab-inactive';
+            document.getElementById('view-admin').classList.remove('hidden'); document.getElementById('view-pending').classList.add('hidden');
+        });
+        subtabAssign.addEventListener('click', () => {
+            subtabAssign.className = 'flex-1 py-2 text-sm font-bold bg-white rounded-md shadow-sm text-gray-800';
+            subtabUsers.className = 'flex-1 py-2 text-sm font-bold text-gray-500 hover:text-gray-800';
+            document.getElementById('admin-view-assign').classList.remove('hidden'); document.getElementById('admin-view-users').classList.add('hidden');
+        });
+        subtabUsers.addEventListener('click', () => {
+            subtabUsers.className = 'flex-1 py-2 text-sm font-bold bg-white rounded-md shadow-sm text-gray-800';
+            subtabAssign.className = 'flex-1 py-2 text-sm font-bold text-gray-500 hover:text-gray-800';
+            document.getElementById('admin-view-users').classList.remove('hidden'); document.getElementById('admin-view-assign').classList.add('hidden');
+        });
+
+    </script>
+</body>
+</html>
