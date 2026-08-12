@@ -3,16 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- NUEVO: Enlace al Manifest para convertirla en App -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2563eb">
     <link rel="apple-touch-icon" href="icon.png">
     
     <title>PDV Entregas Móvil</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS (Sin bloqueo de seguridad para que funcione el diseño) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- HTML5 QR Code Scanner -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+    
+    <!-- Escudo para Errores de Entorno de Vista Previa -->
+    <script>
+        window.addEventListener('error', function(event) {
+            if (event.message === 'Script error.' || event.message.includes('Script error')) {
+                console.warn('Aviso: Error de script cruzado ignorado. Esto es normal en visores de prueba.');
+                event.preventDefault(); 
+            }
+        });
+    </script>
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
         .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
@@ -59,6 +69,10 @@
                     Ingresar
                 </button>
             </form>
+            
+            <div class="mt-6 text-center">
+                <span class="text-xs text-gray-400 font-mono font-medium">v1.2.0</span>
+            </div>
         </div>
     </div>
 
@@ -70,7 +84,10 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                 </div>
                 <div>
-                    <h1 class="text-sm font-bold text-gray-800 leading-tight">Entregas</h1>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-sm font-bold text-gray-800 leading-tight">Entregas</h1>
+                        <span class="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold">v1.2.0</span>
+                    </div>
                     <p id="user-display" class="text-xs text-gray-500">Cargando...</p>
                 </div>
             </div>
@@ -107,34 +124,46 @@
                     <button id="subtab-history" class="flex-1 py-2 text-sm font-bold text-gray-500 hover:text-gray-800 transition-all">Historial</button>
                 </div>
 
+                <!-- SUB-PESTAÑA: ASIGNAR -->
                 <div id="admin-view-assign" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Colaborador:</label>
                         <select id="assign-user-select" class="w-full rounded-lg border-gray-300 border py-3 px-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"></select>
                     </div>
                     
+                    <hr class="border-gray-200">
+
+                    <!-- SECCIÓN DE FOTO (OPCIONAL) -->
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        <label class="block text-xs font-bold text-blue-800 mb-2">Requisito de Fotografía:</label>
-                        <div class="flex space-x-4">
-                            <label class="flex items-center text-sm font-medium text-gray-700"><input type="radio" id="photo-req-no" name="assign-photo-req" value="no" checked class="mr-2"> No incluir</label>
-                            <label class="flex items-center text-sm font-medium text-gray-700"><input type="radio" id="photo-req-yes" name="assign-photo-req" value="yes" class="mr-2"> Tomar Foto</label>
+                        <label class="block text-xs font-bold text-blue-800 mb-2">Foto en bodega (Opcional)</label>
+                        
+                        <button type="button" id="btn-admin-take-photo" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-sm flex justify-center items-center space-x-2 active:scale-95 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span>📸 Tomar Foto</span>
+                        </button>
+                        
+                        <input type="file" id="assign-staged-camera" accept="image/*" capture="environment" class="hidden">
+                        
+                        <div id="admin-photo-preview-container" class="hidden relative mt-3">
+                            <img id="admin-photo-preview" src="" class="w-full h-32 object-cover rounded-lg border border-blue-200 shadow-sm">
+                            <input type="hidden" id="admin-photo-data">
                         </div>
                     </div>
 
+                    <!-- SECCIÓN DE CÓDIGO (OBLIGATORIA) -->
                     <div>
-                        <label class="block text-xs font-medium text-gray-500 mb-1">Escanea o ingresa guía:</label>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Código de la Guía</label>
                         <div class="flex space-x-2">
-                            <input type="text" id="assign-single-code" class="flex-1 rounded-lg border-gray-300 border py-3 px-3 uppercase font-mono text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="text" id="assign-single-code" class="flex-1 rounded-lg border-gray-300 border py-3 px-3 uppercase font-mono text-sm shadow-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej. GUIA123">
                             <button type="button" id="btn-scan-assign-code" class="bg-gray-800 text-white px-3 rounded-lg flex items-center justify-center hover:bg-gray-700 active:scale-95 transition">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5v2a1 1 0 01-2 0V4zm14-1a1 1 0 011 1v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3zM3 20a1 1 0 011-1h4a1 1 0 110 2H5v-2a1 1 0 01-2 0v-3a1 1 0 112 0v2zm14 1a1 1 0 01-1-1v-3a1 1 0 112 0v3h-2a1 1 0 110 2z"></path></svg>
                             </button>
-                            <button type="button" id="btn-add-assign-code" class="bg-blue-100 text-blue-700 font-bold px-4 rounded-lg active:scale-95 transition flex items-center">Añadir</button>
+                            <button type="button" id="btn-add-assign-code" class="bg-green-600 text-white font-bold px-4 rounded-lg hover:bg-green-700 active:scale-95 transition flex items-center shadow">Añadir</button>
                         </div>
                     </div>
                     
-                    <input type="file" id="assign-staged-camera" accept="image/*" capture="environment" class="hidden">
                     <div id="assign-staged-list" class="space-y-2 max-h-48 overflow-y-auto pt-2"></div>
-                    <button id="btn-assign-package" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-md flex justify-center items-center mt-2 transition active:scale-95">Asignar Guías (0)</button>
+                    <button id="btn-assign-package" class="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 shadow-md flex justify-center items-center mt-2 transition active:scale-95 hidden">Guardar Asignaciones (0)</button>
                 </div>
 
                 <div id="admin-view-users" class="hidden bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
@@ -160,7 +189,7 @@
                                     <th class="px-3 py-2 border-b">Repartidor</th>
                                     <th class="px-3 py-2 border-b">Estado</th>
                                     <th class="px-3 py-2 border-b">Recibió / Fecha</th>
-                                    <th class="px-3 py-2 border-b text-center">Foto</th>
+                                    <th class="px-3 py-2 border-b text-center">Fotos (Bodega / Entrega)</th>
                                 </tr>
                             </thead>
                             <tbody id="history-table-body" class="divide-y divide-gray-100">
@@ -188,15 +217,15 @@
                     <input type="text" id="delivery-name" class="w-full rounded-xl border-gray-300 border py-3 px-4 focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1">Evidencia:</label>
-                    <button type="button" id="btn-open-camera" class="w-full bg-gray-100 py-4 rounded-xl border-2 border-dashed border-gray-300">Abrir Cámara</button>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Evidencia (Repartidor):</label>
+                    <button type="button" id="btn-open-camera" class="w-full bg-gray-100 py-4 rounded-xl border-2 border-dashed border-gray-300 font-bold text-gray-700">📸 Tomar Foto</button>
                     <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
                     <div id="photo-preview-container" class="hidden relative mt-2">
-                        <img id="photo-preview" src="" class="w-full h-48 object-cover rounded-xl">
+                        <img id="photo-preview" src="" class="w-full h-48 object-cover rounded-xl border border-gray-300">
                         <input type="hidden" id="photo-data" required>
                     </div>
                 </div>
-                <button type="submit" id="btn-submit-delivery" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl">Finalizar</button>
+                <button type="submit" id="btn-submit-delivery" class="w-full bg-green-600 text-white font-bold py-4 rounded-xl shadow-md active:scale-95 transition">Finalizar Entrega</button>
             </form>
         </div>
     </div>
@@ -210,27 +239,52 @@
         <div class="flex-1 relative flex items-center justify-center w-full h-full"><div id="reader" class="w-full max-w-md mx-auto"></div></div>
     </div>
 
-    <!-- VISOR DE FOTOGRAFÍAS -->
+    <!-- VISOR DE FOTOGRAFÍAS A PANTALLA COMPLETA -->
     <div id="photo-viewer-modal" class="fixed inset-0 z-50 bg-black bg-opacity-95 flex flex-col justify-center items-center hidden fade-in p-4">
-        <button type="button" id="btn-close-photo-viewer" class="absolute top-4 right-4 p-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition">
+        <button type="button" id="btn-close-photo-viewer" class="absolute top-4 right-4 p-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition z-50">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        <img id="full-size-photo" src="" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl">
-        <div id="photo-viewer-info" class="bg-white px-4 py-2 mt-4 rounded-xl font-mono text-sm font-bold text-gray-800"></div>
+        <img id="full-size-photo" src="" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl relative z-40">
+        <div id="photo-viewer-info" class="bg-white px-4 py-2 mt-4 rounded-xl font-mono text-sm font-bold text-gray-800 z-40"></div>
     </div>
 
     <script type="module">
-        // Instalar el Service Worker solo si NO estamos en un entorno de vista previa (blob:)
         if ('serviceWorker' in navigator && window.location.protocol !== 'blob:' && window.location.protocol !== 'data:') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('Modo Offline Activado'))
-                    .catch(err => console.warn('Nota: El modo Offline se activará cuando subas la app a GitHub.', err));
+                    .catch(err => console.warn('Nota: Offline se activará en GitHub', err));
+            });
+        }
+
+        // ==========================================
+        // COMPRESOR DE IMÁGENES
+        // ==========================================
+        function compressImage(base64Str, maxWidth = 800, maxHeight = 800) {
+            return new Promise((resolve) => {
+                let img = new Image();
+                img.src = base64Str;
+                img.onload = () => {
+                    let canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                    } else {
+                        if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    let ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                };
             });
         }
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, getDocs, collection, onSnapshot, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, collection, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB0v_mq27fcdGLPnbts_W9k6RTEaLTBEBg",
@@ -243,9 +297,15 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = initializeFirestore(app, {
-            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
-        });
+        
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+            });
+        } catch (error) {
+            db = getFirestore(app);
+        }
 
         const APP_ID = 'entregas_pdv';
         const usersCol = collection(db, 'artifacts', APP_ID, 'public', 'data', 'users');
@@ -256,10 +316,9 @@
         let allPackages = [];
         let allUsers = [];
 
-        // Funciones auxiliares
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
-            toast.className = `px-4 py-3 rounded-xl shadow-lg text-white text-sm fade-in flex items-center ${type === 'error' ? 'bg-red-600' : 'bg-gray-800'}`;
+            toast.className = `px-4 py-3 rounded-xl shadow-lg text-white text-sm fade-in flex items-center z-50 ${type === 'error' ? 'bg-red-600' : 'bg-gray-800'}`;
             toast.innerText = message;
             document.getElementById('toast-container').appendChild(toast);
             setTimeout(() => { toast.remove() }, 3000);
@@ -267,16 +326,22 @@
 
         function updateNetworkStatus() {
             const banner = document.getElementById('network-status');
-            if (navigator.onLine) {
-                banner.classList.add('hidden');
-            } else {
-                banner.classList.remove('hidden');
-            }
+            if (navigator.onLine) { banner.classList.add('hidden'); } else { banner.classList.remove('hidden'); }
         }
         window.addEventListener('online', updateNetworkStatus);
         window.addEventListener('offline', updateNetworkStatus);
 
-        // Autenticación
+        // ==========================================
+        // SISTEMA DE SESIÓN (PERSISTENTE)
+        // ==========================================
+        // Al recargar la página (por la cámara o por salir de la app), 
+        // buscamos si ya había un usuario guardado.
+        const savedUser = localStorage.getItem('pdv_user_session');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            startApp();
+        }
+
         async function initAuth() {
             try {
                 const adminRef = doc(usersCol, 'admin');
@@ -297,6 +362,10 @@
                 const userDoc = await getDoc(doc(usersCol, userIn));
                 if (userDoc.exists() && userDoc.data().pin === pinIn) {
                     currentUser = userDoc.data();
+                    
+                    // Guardar la sesión en la memoria fija del celular
+                    localStorage.setItem('pdv_user_session', JSON.stringify(currentUser));
+                    
                     startApp();
                 } else {
                     showToast("Datos incorrectos", "error");
@@ -307,11 +376,14 @@
 
         document.getElementById('btn-logout').addEventListener('click', () => {
             currentUser = null;
+            // Borrar la sesión para que vuelva a pedir contraseña
+            localStorage.removeItem('pdv_user_session');
             document.getElementById('app-container').classList.add('hidden');
             document.getElementById('login-screen').classList.remove('hidden');
         });
 
         function startApp() {
+            if(!currentUser) return;
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('app-container').classList.remove('hidden');
             document.getElementById('user-display').innerText = `Hola, ${currentUser.username}`;
@@ -322,21 +394,28 @@
             loadDataListeners();
         }
 
-        // Base de datos en tiempo real (Funciona offline)
         function loadDataListeners() {
             onSnapshot(usersCol, (snapshot) => {
+                if(!currentUser) return; // Protección si cerramos sesión
                 allUsers = []; snapshot.forEach(doc => allUsers.push(doc.data()));
-                renderUsersAdmin(); renderAssignUserSelect();
+                if (currentUser.role === 'admin') {
+                    renderUsersAdmin(); 
+                    renderAssignUserSelect();
+                }
             });
             onSnapshot(packagesCol, (snapshot) => {
+                if(!currentUser) return; // Protección si cerramos sesión
                 allPackages = []; snapshot.forEach(doc => allPackages.push(doc.data()));
                 renderPendingPackages();
-                renderHistoryTable();
+                if (currentUser.role === 'admin') renderHistoryTable();
             });
         }
 
-        // Mis Entregas
+        // ==========================================
+        // VISTAS Y LISTADOS
+        // ==========================================
         function renderPendingPackages(filterCode = '') {
+            if (!currentUser) return;
             const list = document.getElementById('pending-list');
             list.innerHTML = '';
             let myPackages = allPackages.filter(p => p.assignedTo === currentUser.username && p.status === 'pending');
@@ -358,7 +437,9 @@
 
         document.getElementById('search-pending').addEventListener('input', (e) => renderPendingPackages(e.target.value.trim().toUpperCase()));
 
-        // Cámara de Entrega
+        // ==========================================
+        // CÁMARA DE ENTREGA (REPARTIDOR)
+        // ==========================================
         const cameraInput = document.getElementById('camera-input');
         const photoPreview = document.getElementById('photo-preview');
         const photoDataInput = document.getElementById('photo-data');
@@ -366,6 +447,11 @@
         function openDeliveryModal(pkg) {
             document.getElementById('delivery-id').value = pkg.id;
             document.getElementById('delivery-package-code').innerText = "Guía: " + pkg.code;
+            
+            photoDataInput.value = '';
+            document.getElementById('photo-preview-container').classList.add('hidden');
+            document.getElementById('delivery-name').value = '';
+            
             document.getElementById('delivery-modal').classList.remove('hidden');
         }
         document.getElementById('btn-close-delivery').addEventListener('click', () => document.getElementById('delivery-modal').classList.add('hidden'));
@@ -375,9 +461,10 @@
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (event) => {
-                photoPreview.src = event.target.result;
-                photoDataInput.value = event.target.result;
+            reader.onload = async (event) => {
+                const compressedPhoto = await compressImage(event.target.result);
+                photoPreview.src = compressedPhoto;
+                photoDataInput.value = compressedPhoto;
                 document.getElementById('photo-preview-container').classList.remove('hidden');
             };
             reader.readAsDataURL(file);
@@ -389,18 +476,28 @@
             const name = document.getElementById('delivery-name').value;
             const photo = photoDataInput.value;
             
-            if (!photo) { showToast("Foto obligatoria", "error"); return; }
+            if (!photo) { showToast("⚠️ La foto de evidencia es obligatoria", "error"); return; }
             document.getElementById('btn-submit-delivery').innerText = "Guardando...";
 
             try {
-                await updateDoc(doc(packagesCol, id), { status: 'delivered', receivedBy: name, deliveryPhoto: photo, deliveredAt: Date.now() });
-                showToast("Entrega Registrada");
+                await updateDoc(doc(packagesCol, id), { 
+                    status: 'delivered', 
+                    receivedBy: name, 
+                    deliveryPhoto: photo, 
+                    deliveredAt: Date.now() 
+                });
+                showToast("✅ Entrega Registrada");
                 document.getElementById('delivery-modal').classList.add('hidden');
-            } catch (error) { showToast("Error", "error"); }
-            document.getElementById('btn-submit-delivery').innerText = "Finalizar";
+            } catch (error) { 
+                showToast("❌ Error al guardar. Verifica tu conexión.", "error"); 
+                console.error(error);
+            }
+            document.getElementById('btn-submit-delivery').innerText = "Finalizar Entrega";
         });
 
-        // Panel Administrador
+        // ==========================================
+        // PANEL DE ADMINISTRADOR Y USUARIOS
+        // ==========================================
         function renderUsersAdmin() {
             const list = document.getElementById('users-list');
             list.innerHTML = '';
@@ -418,30 +515,108 @@
             showToast("Usuario Creado");
         });
 
-        let stagedAssignments = [];
-        document.getElementById('btn-add-assign-code').addEventListener('click', () => {
-            const code = document.getElementById('assign-single-code').value.toUpperCase();
-            if(code) { stagedAssignments.push({code}); renderStagedAssignments(); }
-        });
-        function renderStagedAssignments() {
-            const list = document.getElementById('assign-staged-list');
-            list.innerHTML = '';
-            stagedAssignments.forEach(i => list.innerHTML += `<div class="p-2 border mb-1">${i.code}</div>`);
-            document.getElementById('btn-assign-package').innerText = `Asignar (${stagedAssignments.length})`;
-        }
-        document.getElementById('btn-assign-package').addEventListener('click', async () => {
-            const username = document.getElementById('assign-user-select').value;
-            for (const item of stagedAssignments) {
-                const pkg = { id: Date.now().toString(), code: item.code, assignedTo: username, status: 'pending', assignedAt: Date.now() };
-                await setDoc(doc(packagesCol, pkg.id), pkg);
-            }
-            stagedAssignments = []; renderStagedAssignments(); showToast("Asignados");
+        // ==========================================
+        // LÓGICA: FOTO OPCIONAL EN BODEGA
+        // ==========================================
+        const btnAdminCamera = document.getElementById('btn-admin-take-photo');
+        const adminCameraInput = document.getElementById('assign-staged-camera');
+        const adminPhotoPreviewContainer = document.getElementById('admin-photo-preview-container');
+        const adminPhotoPreview = document.getElementById('admin-photo-preview');
+        const adminPhotoData = document.getElementById('admin-photo-data');
+
+        btnAdminCamera.addEventListener('click', () => { adminCameraInput.click(); });
+
+        adminCameraInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const compressedPhoto = await compressImage(event.target.result);
+                adminPhotoPreview.src = compressedPhoto;
+                adminPhotoData.value = compressedPhoto;
+                adminPhotoPreviewContainer.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         });
 
-        // LÓGICA DE LA TABLA DE HISTORIAL Y VISOR DE FOTOS
+        let stagedAssignments = [];
+        document.getElementById('btn-add-assign-code').addEventListener('click', () => {
+            const code = document.getElementById('assign-single-code').value.toUpperCase().trim();
+            const adminPhoto = adminPhotoData.value;
+
+            if(!code) {
+                showToast("⚠️ Ingresa o escanea el código", "error");
+                return;
+            }
+
+            stagedAssignments.push({ code: code, adminPhoto: adminPhoto }); 
+            renderStagedAssignments(); 
+            
+            document.getElementById('assign-single-code').value = '';
+            adminPhotoData.value = '';
+            adminPhotoPreview.src = '';
+            adminPhotoPreviewContainer.classList.add('hidden');
+        });
+
+        function renderStagedAssignments() {
+            const list = document.getElementById('assign-staged-list');
+            const btnAssign = document.getElementById('btn-assign-package');
+            list.innerHTML = '';
+            stagedAssignments.forEach((item, index) => {
+                const hasPhotoIcon = item.adminPhoto ? '📸' : '📦';
+                list.innerHTML += `
+                    <div class="p-2 border border-gray-200 bg-gray-50 rounded-lg mb-1 flex justify-between items-center text-sm font-mono">
+                        <span>${hasPhotoIcon} ${item.code}</span>
+                        <button type="button" class="text-red-500 font-bold px-2" onclick="removeStaged(${index})">X</button>
+                    </div>`;
+            });
+            
+            if(stagedAssignments.length > 0) {
+                btnAssign.classList.remove('hidden');
+                btnAssign.innerText = `Guardar Asignaciones (${stagedAssignments.length})`;
+            } else {
+                btnAssign.classList.add('hidden');
+            }
+        }
+
+        window.removeStaged = function(index) {
+            stagedAssignments.splice(index, 1);
+            renderStagedAssignments();
+        }
+
+        document.getElementById('btn-assign-package').addEventListener('click', async () => {
+            if(stagedAssignments.length === 0) return;
+
+            const username = document.getElementById('assign-user-select').value;
+            document.getElementById('btn-assign-package').innerText = "Guardando...";
+
+            try {
+                for (const item of stagedAssignments) {
+                    const pkg = { 
+                        id: Date.now().toString() + Math.random().toString(36).substring(2, 6), 
+                        code: item.code, 
+                        assignedTo: username, 
+                        status: 'pending', 
+                        assignedAt: Date.now(),
+                        adminPhoto: item.adminPhoto
+                    };
+                    await setDoc(doc(packagesCol, pkg.id), pkg);
+                }
+                stagedAssignments = []; 
+                renderStagedAssignments(); 
+                showToast("✅ Paquetes asignados correctamente");
+            } catch (e) {
+                console.error(e);
+                showToast("❌ Error al asignar", "error");
+            }
+        });
+
+        // ==========================================
+        // TABLA DE HISTORIAL
+        // ==========================================
         function renderHistoryTable() {
             const tbody = document.getElementById('history-table-body');
-            if(!tbody) return;
+            if(!tbody || !currentUser) return;
             tbody.innerHTML = '';
             
             const sortedPackages = [...allPackages].sort((a, b) => b.assignedAt - a.assignedAt);
@@ -460,29 +635,40 @@
                 const dateStr = isDelivered && pkg.deliveredAt ? new Date(pkg.deliveredAt).toLocaleString('es-MX', {dateStyle: 'short', timeStyle: 'short'}) : '-';
                 const receiverStr = isDelivered && pkg.receivedBy ? pkg.receivedBy : '-';
                 
-                let photoHtml = `<span class="text-gray-300 text-[10px]">Sin foto</span>`;
+                let photoHtml = `<div class="flex space-x-2 justify-center">`;
+                
+                if (pkg.adminPhoto) {
+                    photoHtml += `<img src="${pkg.adminPhoto}" class="w-8 h-8 object-cover rounded cursor-pointer border-2 border-blue-400 hover:scale-110 transition shadow-sm" onclick="viewFullPhoto('${pkg.adminPhoto}', 'Bodega: ${pkg.code}')" title="Ver foto de Bodega">`;
+                }
+
                 if (isDelivered && pkg.deliveryPhoto) {
-                    photoHtml = `<img src="${pkg.deliveryPhoto}" class="w-8 h-8 object-cover rounded cursor-pointer mx-auto border border-gray-300 hover:scale-110 transition-transform" onclick="viewFullPhoto('${pkg.deliveryPhoto}', '${pkg.code}')" alt="Foto">`;
+                    photoHtml += `<img src="${pkg.deliveryPhoto}" class="w-8 h-8 object-cover rounded cursor-pointer border-2 border-green-400 hover:scale-110 transition shadow-sm" onclick="viewFullPhoto('${pkg.deliveryPhoto}', 'Entrega: ${pkg.code}')" title="Ver foto de Entrega">`;
+                }
+
+                if(!pkg.adminPhoto && !(isDelivered && pkg.deliveryPhoto)) {
+                    photoHtml = `<span class="text-gray-300 text-[10px]">Sin foto</span>`;
+                } else {
+                    photoHtml += `</div>`;
                 }
 
                 tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="px-3 py-3 border-b font-mono font-bold text-gray-800">${pkg.code}</td>
-                        <td class="px-3 py-3 border-b text-gray-600">${pkg.assignedTo}</td>
-                        <td class="px-3 py-3 border-b">${statusBadge}</td>
-                        <td class="px-3 py-3 border-b text-gray-500 flex flex-col">
+                    <tr class="hover:bg-gray-50 transition-colors border-b">
+                        <td class="px-3 py-3 font-mono font-bold text-gray-800">${pkg.code}</td>
+                        <td class="px-3 py-3 text-gray-600">${pkg.assignedTo}</td>
+                        <td class="px-3 py-3">${statusBadge}</td>
+                        <td class="px-3 py-3 text-gray-500 flex flex-col">
                             <span class="font-bold text-gray-700">${receiverStr}</span>
                             <span class="text-[10px]">${dateStr}</span>
                         </td>
-                        <td class="px-3 py-3 border-b text-center align-middle">${photoHtml}</td>
+                        <td class="px-3 py-3 text-center align-middle">${photoHtml}</td>
                     </tr>
                 `;
             });
         }
 
-        window.viewFullPhoto = function(photoData, code) {
+        window.viewFullPhoto = function(photoData, title) {
             document.getElementById('full-size-photo').src = photoData;
-            document.getElementById('photo-viewer-info').innerText = "Evidencia Guía: " + code;
+            document.getElementById('photo-viewer-info').innerText = title;
             document.getElementById('photo-viewer-modal').classList.remove('hidden');
         };
 
@@ -490,7 +676,9 @@
             document.getElementById('photo-viewer-modal').classList.add('hidden');
         });
 
-        // Escáner en Vivo
+        // ==========================================
+        // ESCÁNER
+        // ==========================================
         let scannerTarget = '';
         function openScanner() {
             document.getElementById('scanner-modal').classList.remove('hidden');
@@ -505,15 +693,25 @@
         document.getElementById('btn-scan-assign-code').addEventListener('click', () => { scannerTarget = 'assign'; openScanner(); });
         document.getElementById('btn-close-scanner').addEventListener('click', () => document.getElementById('scanner-modal').classList.add('hidden'));
 
-        // Pestañas
+        // ==========================================
+        // PESTAÑAS (CORREGIDAS)
+        // ==========================================
         document.getElementById('tab-pending').addEventListener('click', () => {
-            document.getElementById('view-pending').classList.remove('hidden'); document.getElementById('view-admin').classList.add('hidden');
-        });
-        document.getElementById('tab-admin').addEventListener('click', () => {
-            document.getElementById('view-admin').classList.remove('hidden'); document.getElementById('view-pending').classList.add('hidden');
+            document.getElementById('view-pending').classList.remove('hidden'); 
+            document.getElementById('view-admin').classList.add('hidden');
+            
+            document.getElementById('tab-pending').classList.replace('tab-inactive', 'tab-active');
+            document.getElementById('tab-admin').classList.replace('tab-active', 'tab-inactive');
         });
         
-        // Pestañas Administrativas
+        document.getElementById('tab-admin').addEventListener('click', () => {
+            document.getElementById('view-admin').classList.remove('hidden'); 
+            document.getElementById('view-pending').classList.add('hidden');
+            
+            document.getElementById('tab-admin').classList.replace('tab-inactive', 'tab-active');
+            document.getElementById('tab-pending').classList.replace('tab-active', 'tab-inactive');
+        });
+        
         function resetAdminTabs() {
             ['subtab-assign', 'subtab-users', 'subtab-history'].forEach(id => {
                 document.getElementById(id).classList.replace('text-gray-800', 'text-gray-500');
