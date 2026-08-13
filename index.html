@@ -29,7 +29,7 @@
         }
     </script>
     <!-- HTML5 QR Code Scanner -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     
     <style>
         body { 
@@ -130,7 +130,7 @@
                         <input type="text" id="search-pending" placeholder="Buscar por guía..." class="w-full rounded-2xl border-slate-200 border py-3.5 pl-11 pr-4 focus:ring-2 focus:ring-brand-500 uppercase font-mono text-sm bg-white shadow-sm outline-none transition-all placeholder:normal-case placeholder:font-sans">
                         <svg class="w-5 h-5 absolute left-3.5 top-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <button type="button" id="btn-scan-search" class="bg-slate-800 text-white px-4 rounded-2xl shadow-sm flex items-center justify-center hover:bg-slate-700 active:scale-95 transition" title="Escanear código">
+                    <button type="button" id="btn-scan-search" class="bg-brand-600 hover:bg-brand-700 text-white px-4 rounded-2xl shadow-sm flex items-center justify-center active:scale-95 transition" title="Escanear código">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5v2a1 1 0 01-2 0V4zm14-1a1 1 0 011 1v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3zM3 20a1 1 0 011-1h4a1 1 0 110 2H5v-2a1 1 0 01-2 0v-3a1 1 0 112 0v2zm14 1a1 1 0 01-1-1v-3a1 1 0 112 0v3h-2a1 1 0 110 2z"></path></svg>
                     </button>
                 </div>
@@ -182,15 +182,15 @@
                     </div>
 
                     <!-- SECCIÓN DE FOTO OPCIONAL (BODEGA) -->
-                    <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                        <label class="block text-xs font-bold text-blue-800 mb-2">Foto en bodega (Opcional)</label>
+                    <div class="bg-brand-50 p-4 rounded-xl border border-brand-100">
+                        <label class="block text-xs font-bold text-brand-800 mb-2">Foto en bodega (Opcional)</label>
                         <button type="button" id="btn-admin-take-photo" class="w-full bg-brand-600 text-white font-bold py-3 rounded-xl hover:bg-brand-700 shadow-sm flex justify-center items-center space-x-2 active:scale-95 transition">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                             <span>📸 Tomar Foto</span>
                         </button>
                         <input type="file" id="assign-staged-camera" accept="image/*" capture="environment" class="hidden">
                         <div id="admin-photo-preview-container" class="hidden relative mt-3">
-                            <img id="admin-photo-preview" src="" class="w-full h-40 object-cover rounded-xl border border-blue-200 shadow-sm">
+                            <img id="admin-photo-preview" src="" class="w-full h-40 object-cover rounded-xl border border-brand-200 shadow-sm">
                             <input type="hidden" id="admin-photo-data">
                             <button type="button" id="btn-admin-remove-photo" class="absolute top-1 right-1 bg-white rounded-full p-1 shadow text-xs text-red-500 font-bold">✕</button>
                         </div>
@@ -200,7 +200,7 @@
                         <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Código de Guía</label>
                         <div class="flex space-x-2">
                             <input type="text" id="assign-single-code" class="flex-1 rounded-xl border-slate-200 border py-3 px-3 uppercase font-mono text-sm shadow-sm outline-none focus:ring-2 focus:ring-brand-500" placeholder="Ej. GUIA987">
-                            <button type="button" id="btn-scan-assign-code" class="bg-slate-800 text-white px-3 rounded-xl flex items-center justify-center hover:bg-slate-700 active:scale-95 transition" title="Escanear código">
+                            <button type="button" id="btn-scan-assign-code" class="bg-brand-600 text-white px-3 rounded-xl flex items-center justify-center hover:bg-brand-700 active:scale-95 transition" title="Escanear código">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H5v2a1 1 0 01-2 0V4zm14-1a1 1 0 011 1v3a1 1 0 11-2 0V5h-2a1 1 0 110-2h3zM3 20a1 1 0 011-1h4a1 1 0 110 2H5v-2a1 1 0 01-2 0v-3a1 1 0 112 0v2zm14 1a1 1 0 01-1-1v-3a1 1 0 112 0v3h-2a1 1 0 110 2z"></path></svg>
                             </button>
                             <button type="button" id="btn-add-assign-code" class="bg-brand-600 text-white font-bold px-4 rounded-xl hover:bg-brand-700 active:scale-95 transition flex items-center shadow-md shadow-brand-500/20 text-sm">Añadir</button>
@@ -294,9 +294,10 @@
             <div class="absolute inset-0 flex flex-col items-center justify-center text-center text-gray-500 text-sm px-8 z-0">
                 <svg class="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                 <p>Cargando cámara...</p>
-                <p class="text-xs mt-2 text-gray-600">Si se queda en negro, instala la app directamente desde el menú de Google Chrome.</p>
+                <p class="text-xs mt-2 text-gray-600">Si se queda en negro, instala la app desde Chrome.</p>
             </div>
-            <div id="reader" class="w-full max-w-md mx-auto relative z-10 bg-black"></div>
+            <video id="scanner-video" autoplay playsinline muted class="w-full max-w-md mx-auto relative z-10 bg-black hidden"></video>
+            <div id="reader" class="w-full max-w-md mx-auto relative z-10 bg-black hidden"></div>
         </div>
     </div>
 
@@ -404,7 +405,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         
-        // 🔥 Habilitar persistencia offline
+        // Persistencia offline
         let db;
         try {
             db = initializeFirestore(app, {
@@ -430,17 +431,18 @@
         let historyFilterDateTo = '';
         let html5QrCode = null;
         let scannerTarget = '';
+        let detectionInterval = null;
+        let currentStream = null;
 
-        // 🟢 Registrar Service Worker para cachear interfaz
+        // Registrar Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('Service Worker registrado'))
-                    .catch(err => console.warn('SW no registrado (quizás entorno sin HTTPS):', err));
+                    .catch(err => console.warn('SW no registrado:', err));
             });
         }
 
-        // Utilidades
         function showToast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -495,10 +497,8 @@
             return diffDays > 2;
         }
 
-        // Autenticación anónima
         signInAnonymously(auth).catch(err => console.error("Error Auth:", err));
 
-        // Sesión guardada
         const savedUser = localStorage.getItem('pdv_user');
         if (savedUser) {
             try {
@@ -509,7 +509,6 @@
             }
         }
 
-        // Login
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const inputUser = document.getElementById('login-username').value.trim().toLowerCase();
@@ -543,7 +542,6 @@
             }
         });
 
-        // Logout
         document.getElementById('btn-logout').addEventListener('click', () => {
             if (unsubscribeUsers) { unsubscribeUsers(); unsubscribeUsers = null; }
             if (unsubscribePackages) { unsubscribePackages(); unsubscribePackages = null; }
@@ -638,14 +636,12 @@
             const myUsername = (currentUser.username || currentUser.id || '').trim().toLowerCase();
             const myPackages = allPackages.filter(p => getAssignedUser(p) === myUsername);
 
-            // Métricas
             const packagesForMetrics = isAdmin ? allPackages : myPackages;
             document.getElementById('stat-total').innerText = packagesForMetrics.length;
             document.getElementById('stat-pending').innerText = packagesForMetrics.filter(p => getPackageStatus(p) === 'pendiente').length;
             document.getElementById('stat-delivered').innerText = packagesForMetrics.filter(p => getPackageStatus(p) === 'entregado').length;
             document.getElementById('stat-overdue').innerText = packagesForMetrics.filter(p => isOverdue(p)).length;
 
-            // Mostrar/ocultar secciones según rol
             const subtabContainer = document.getElementById('subtab-container');
             const assignView = document.getElementById('admin-view-assign');
             const usersView = document.getElementById('admin-view-users');
@@ -670,7 +666,6 @@
                 if (userFilterContainer) userFilterContainer.style.display = 'none';
             }
 
-            // Llenar selector de colaborador en filtro de historial (solo admin)
             const historyUserSelect = document.getElementById('history-filter-user');
             if (isAdmin && historyUserSelect) {
                 const currentValue = historyUserSelect.value;
@@ -682,7 +677,6 @@
                 });
             }
 
-            // Historial
             let packagesForHistory = isAdmin ? [...allPackages] : myPackages;
 
             if (isAdmin && historyFilterUser) {
@@ -755,11 +749,9 @@
                 }
             }
 
-            // Badge pendientes
             const pendingCount = myPackages.filter(p => getPackageStatus(p) === 'pendiente').length;
             document.getElementById('pending-count-badge').innerText = pendingCount;
 
-            // Lista de Mis Entregas
             const pendingList = document.getElementById('pending-list');
             const searchPendingText = (document.getElementById('search-pending').value || '').trim().toUpperCase();
             let filteredPackages = [];
@@ -799,7 +791,6 @@
                 });
             }
 
-            // Select de asignación y lista de usuarios (admin)
             const select = document.getElementById('assign-user-select');
             const usersList = document.getElementById('users-list');
             if (isAdmin && select && usersList) {
@@ -834,12 +825,67 @@
             }
         }
 
-        // ====== LÓGICA DEL ESCÁNER MEJORADO ======
+        // ====== ESCÁNER MEJORADO ======
+        function openScanner() {
+            document.getElementById('scanner-modal').classList.remove('hidden');
+            setTimeout(startScanner, 300);
+        }
+
         function startScanner() {
+            const video = document.getElementById('scanner-video');
+            const readerDiv = document.getElementById('reader');
+            video.classList.add('hidden');
+            readerDiv.classList.add('hidden');
+
+            if ('BarcodeDetector' in window) {
+                video.classList.remove('hidden');
+                startNativeScanner(video);
+            } else {
+                readerDiv.classList.remove('hidden');
+                startHtml5Scanner();
+            }
+        }
+
+        async function startNativeScanner(video) {
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                video.srcObject = currentStream;
+                await video.play();
+            } catch (error) {
+                console.error('Error al acceder a la cámara:', error);
+                showToast('No se pudo acceder a la cámara', 'error');
+                closeScanner();
+                return;
+            }
+
+            const formats = ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'codabar', 'upc_a', 'upc_e', 'itf'];
+            const detector = new BarcodeDetector({ formats });
+
+            detectionInterval = setInterval(async () => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    try {
+                        const barcodes = await detector.detect(video);
+                        if (barcodes.length > 0) {
+                            const value = barcodes[0].rawValue;
+                            stopNativeScanner();
+                            handleScanResult(value);
+                        }
+                    } catch (error) {}
+                }
+            }, 150);
+        }
+
+        function stopNativeScanner() {
+            if (detectionInterval) { clearInterval(detectionInterval); detectionInterval = null; }
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
+        }
+
+        function startHtml5Scanner() {
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode('reader');
             } else {
-                // Si ya existe, detener y limpiar antes de reiniciar
                 html5QrCode.stop().then(() => {
                     html5QrCode.clear();
                     html5QrCode = new Html5Qrcode('reader');
@@ -849,58 +895,31 @@
             }
 
             const config = {
-                fps: 15,                     // Mayor velocidad de detección
-                qrbox: { width: 200, height: 100 }, // Área de escaneo más pequeña (mejor para códigos lineales)
-                aspectRatio: 1.0,            // Evitar distorsiones
-                disableFlip: true            // Acelera el procesamiento
+                fps: 20,
+                qrbox: { width: 250, height: 150 },
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
             };
 
             html5QrCode.start(
                 { facingMode: "environment" },
                 config,
                 (decodedText) => {
-                    // Detener escáner al primer éxito
-                    if (html5QrCode) {
-                        html5QrCode.stop().then(() => {
-                            document.getElementById('scanner-modal').classList.add('hidden');
-                            if (scannerTarget === 'search') {
-                                document.getElementById('search-pending').value = decodedText;
-                                renderApp();
-                            } else if (scannerTarget === 'assign') {
-                                document.getElementById('assign-single-code').value = decodedText;
-                            }
-                        }).catch(() => {
-                            document.getElementById('scanner-modal').classList.add('hidden');
-                        });
-                    }
+                    html5QrCode.stop().then(() => {
+                        closeScanner();
+                        handleScanResult(decodedText);
+                    }).catch(() => {
+                        closeScanner();
+                    });
                 },
-                (errorMessage) => {
-                    // Ignorar errores de lectura continua (no hacer nada)
-                }
+                () => {}
             ).catch(err => {
                 console.error("Error al iniciar el escáner:", err);
                 showToast("❌ Cámara bloqueada. Usa Chrome e 'Instalar App'.", "error");
-                document.getElementById('scanner-modal').classList.add('hidden');
+                closeScanner();
             });
         }
 
-        function openScanner() {
-            document.getElementById('scanner-modal').classList.remove('hidden');
-            // Pequeño retardo para que el DOM se muestre antes de iniciar la cámara
-            setTimeout(startScanner, 300);
-        }
-
-        document.getElementById('btn-scan-search').addEventListener('click', () => {
-            scannerTarget = 'search';
-            openScanner();
-        });
-
-        document.getElementById('btn-scan-assign-code').addEventListener('click', () => {
-            scannerTarget = 'assign';
-            openScanner();
-        });
-
-        document.getElementById('btn-close-scanner').addEventListener('click', () => {
+        function closeScanner() {
             if (html5QrCode) {
                 html5QrCode.stop().then(() => {
                     document.getElementById('scanner-modal').classList.add('hidden');
@@ -908,9 +927,23 @@
                     document.getElementById('scanner-modal').classList.add('hidden');
                 });
             } else {
+                stopNativeScanner();
                 document.getElementById('scanner-modal').classList.add('hidden');
             }
-        });
+        }
+
+        function handleScanResult(decodedText) {
+            if (scannerTarget === 'search') {
+                document.getElementById('search-pending').value = decodedText;
+                renderApp();
+            } else if (scannerTarget === 'assign') {
+                document.getElementById('assign-single-code').value = decodedText;
+            }
+        }
+
+        document.getElementById('btn-scan-search').addEventListener('click', () => { scannerTarget = 'search'; openScanner(); });
+        document.getElementById('btn-scan-assign-code').addEventListener('click', () => { scannerTarget = 'assign'; openScanner(); });
+        document.getElementById('btn-close-scanner').addEventListener('click', closeScanner);
 
         // ====== EVENTOS DE FILTROS Y OTROS ======
         document.getElementById('history-filter-user').addEventListener('change', (e) => {
@@ -1191,7 +1224,7 @@
             }
         });
 
-        // Navegación
+        // Navegación de pestañas principales
         document.getElementById('tab-pending').addEventListener('click', () => {
             document.getElementById('view-pending').classList.remove('hidden');
             document.getElementById('view-admin').classList.add('hidden');
@@ -1219,7 +1252,7 @@
             });
         }
 
-        // Subpestañas admin
+        // Navegación de subpestañas de administrador
         const subtabs = ['assign', 'users', 'history'];
         subtabs.forEach(tab => {
             document.getElementById(`subtab-${tab}`).addEventListener('click', () => {
@@ -1234,7 +1267,7 @@
             });
         });
 
-        // Inicializar
+        // Inicializar al cargar si hay sesión
         if (savedUser) {
             initApp();
         }
