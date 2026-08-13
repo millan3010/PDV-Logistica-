@@ -385,7 +385,12 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, getDocs, collection, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { 
+            initializeFirestore,
+            persistentLocalCache,
+            persistentMultipleTabManager,
+            doc, setDoc, getDoc, getDocs, collection, onSnapshot, updateDoc, deleteDoc 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB0v_mq27fcdGLPnbts_W9k6RTEaLTBEBg",
@@ -398,7 +403,16 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        
+        // 🔥 Habilitar persistencia offline
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+            });
+        } catch (error) {
+            db = getFirestore(app);
+        }
 
         const usersCol = collection(db, 'artifacts', 'entregas_pdv', 'public', 'data', 'users');
         const packagesCol = collection(db, 'artifacts', 'entregas_pdv', 'public', 'data', 'packages');
@@ -417,6 +431,16 @@
         let html5QrCode = null;
         let scannerTarget = '';
 
+        // 🟢 Registrar Service Worker para cachear interfaz
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado'))
+                    .catch(err => console.warn('SW no registrado (quizás entorno sin HTTPS):', err));
+            });
+        }
+
+        // Utilidades
         function showToast(msg, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -810,42 +834,48 @@
             }
         }
 
-        // ====== LÓGICA DEL ESCÁNER ======
+        // ====== LÓGICA DEL ESCÁNER MEJORADO ======
         function startScanner() {
-            const readerElement = document.getElementById('reader');
-            if (!readerElement) return;
-            
-            // Limpiar cualquier instancia previa
-            if (html5QrCode) {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode('reader');
+            } else {
+                // Si ya existe, detener y limpiar antes de reiniciar
                 html5QrCode.stop().then(() => {
                     html5QrCode.clear();
-                    html5QrCode = null;
+                    html5QrCode = new Html5Qrcode('reader');
                 }).catch(() => {
-                    html5QrCode = null;
+                    html5QrCode = new Html5Qrcode('reader');
                 });
             }
-            
-            html5QrCode = new Html5Qrcode('reader');
-            
+
+            const config = {
+                fps: 15,                     // Mayor velocidad de detección
+                qrbox: { width: 200, height: 100 }, // Área de escaneo más pequeña (mejor para códigos lineales)
+                aspectRatio: 1.0,            // Evitar distorsiones
+                disableFlip: true            // Acelera el procesamiento
+            };
+
             html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 150 } },
+                config,
                 (decodedText) => {
-                    // Detener escáner y procesar resultado
-                    html5QrCode.stop().then(() => {
-                        document.getElementById('scanner-modal').classList.add('hidden');
-                        if (scannerTarget === 'search') {
-                            document.getElementById('search-pending').value = decodedText;
-                            renderApp(); // actualiza resultados de búsqueda
-                        } else if (scannerTarget === 'assign') {
-                            document.getElementById('assign-single-code').value = decodedText;
-                        }
-                    }).catch(() => {
-                        document.getElementById('scanner-modal').classList.add('hidden');
-                    });
+                    // Detener escáner al primer éxito
+                    if (html5QrCode) {
+                        html5QrCode.stop().then(() => {
+                            document.getElementById('scanner-modal').classList.add('hidden');
+                            if (scannerTarget === 'search') {
+                                document.getElementById('search-pending').value = decodedText;
+                                renderApp();
+                            } else if (scannerTarget === 'assign') {
+                                document.getElementById('assign-single-code').value = decodedText;
+                            }
+                        }).catch(() => {
+                            document.getElementById('scanner-modal').classList.add('hidden');
+                        });
+                    }
                 },
                 (errorMessage) => {
-                    // Silenciar errores de lectura continua
+                    // Ignorar errores de lectura continua (no hacer nada)
                 }
             ).catch(err => {
                 console.error("Error al iniciar el escáner:", err);
@@ -856,7 +886,8 @@
 
         function openScanner() {
             document.getElementById('scanner-modal').classList.remove('hidden');
-            startScanner();
+            // Pequeño retardo para que el DOM se muestre antes de iniciar la cámara
+            setTimeout(startScanner, 300);
         }
 
         document.getElementById('btn-scan-search').addEventListener('click', () => {
