@@ -3,16 +3,11 @@ const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
-  './icon.png',
-  // Recursos externos necesarios para la app
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
-  'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js',
-  'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js',
-  'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js'
+  './icon.png'
+  // No incluyas recursos externos aquí: fallan al cachear desde el SW en GitHub Pages
 ];
 
-// Instalación: cachear recursos esenciales
+// Instalación: cachear recursos locales esenciales
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -35,29 +30,33 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Estrategia de caché: primero caché, luego red; excepto para Firestore (no cachear)
+// Estrategia de fetch
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // No cachear peticiones a Firestore u otras APIs de Firebase
-  if (url.hostname.includes('firestore.googleapis.com') || 
-      url.hostname.includes('firebaseio.com') ||
-      url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('gstatic.com') && event.request.method !== 'GET') {
-    // Para peticiones de red no cacheables, simplemente seguir con fetch
+  // No interceptar peticiones a APIs de Firebase/Firestore ni a recursos externos
+  if (
+    url.hostname.includes('firestore.googleapis.com') ||
+    url.hostname.includes('firebaseio.com') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('gstatic.com') ||
+    url.hostname.includes('cdn.tailwindcss.com') ||
+    url.hostname.includes('cdnjs.cloudflare.com')
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Para el resto, usar estrategia cache-first
+  // Para navegaciones, usar red y si falla servir index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Para otros recursos, usar cache-first, luego red
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
-      .catch(() => {
-        // Si falla la red y la petición es de navegación, devolver index.html
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      })
+    caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
