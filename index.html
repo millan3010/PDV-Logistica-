@@ -40,8 +40,8 @@
         .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        #reader { width: 100%; border-radius: 1rem; overflow: hidden; border: none !important; }
-        #reader video { object-fit: cover; }
+        #reader { width: 100%; border-radius: 1rem; overflow: hidden; }
+        #scanner-video { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
 <body class="h-full flex flex-col antialiased text-slate-800 selection:bg-brand-500 selection:text-white">
@@ -121,7 +121,7 @@
             </button>
         </nav>
 
-        <main class="flex-1 overflow-y-auto p-4 pb-24 relative max-w-4xl mx-auto w-full">
+        <main class="flex-1 overflow-y-auto p-3 sm:p-4 pb-24 relative max-w-4xl mx-auto w-full">
             
             <!-- VISTA: MIS ENTREGAS -->
             <div id="view-pending" class="space-y-4 fade-in">
@@ -148,7 +148,7 @@
             <div id="view-admin" class="hidden space-y-5 fade-in">
                 
                 <!-- MÉTRICAS -->
-                <div class="grid grid-cols-4 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total</span>
                         <span id="stat-total" class="text-xl font-black text-slate-800 mt-1">0</span>
@@ -237,22 +237,24 @@
                     
                     <!-- FILTROS DE HISTORIAL -->
                     <div class="space-y-3">
-                        <div class="flex flex-wrap gap-2 items-end">
-                            <div class="flex-1 min-w-[140px]" id="history-filter-user-container">
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                            <div id="history-filter-user-container">
                                 <label class="block text-xs font-bold text-slate-600 mb-1" for="history-filter-user">Repartidor</label>
                                 <select id="history-filter-user" class="w-full rounded-xl border-slate-200 border py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 bg-white">
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                            <div class="flex-1 min-w-[120px]">
+                            <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Desde</label>
                                 <input type="date" id="history-filter-date-from" class="w-full rounded-xl border-slate-200 border py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-500">
                             </div>
-                            <div class="flex-1 min-w-[120px]">
+                            <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Hasta</label>
                                 <input type="date" id="history-filter-date-to" class="w-full rounded-xl border-slate-200 border py-2.5 px-3 text-sm outline-none focus:ring-2 focus:ring-brand-500">
                             </div>
-                            <button id="btn-clear-history-filter" class="bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs">Limpiar</button>
+                            <div class="flex items-end">
+                                <button id="btn-clear-history-filter" class="w-full bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs">Limpiar</button>
+                            </div>
                         </div>
                     </div>
 
@@ -683,15 +685,19 @@
                 packagesForHistory = packagesForHistory.filter(p => getAssignedUser(p) === historyFilterUser.toLowerCase());
             }
 
+            // Filtro de fechas corregido
             if (historyFilterDateFrom || historyFilterDateTo) {
                 packagesForHistory = packagesForHistory.filter(p => getPackageStatus(p) === 'entregado');
                 const from = historyFilterDateFrom ? new Date(historyFilterDateFrom + 'T00:00:00') : null;
                 const to = historyFilterDateTo ? new Date(historyFilterDateTo + 'T23:59:59') : null;
                 packagesForHistory = packagesForHistory.filter(p => {
                     if (!p.deliveredAt) return false;
-                    const d = new Date(p.deliveredAt);
-                    if (from && d < from) return false;
-                    if (to && d > to) return false;
+                    const deliveredDate = new Date(p.deliveredAt);
+                    const day = deliveredDate.getFullYear() * 10000 + (deliveredDate.getMonth() + 1) * 100 + deliveredDate.getDate();
+                    const fromDay = from ? from.getFullYear() * 10000 + (from.getMonth() + 1) * 100 + from.getDate() : null;
+                    const toDay = to ? to.getFullYear() * 10000 + (to.getMonth() + 1) * 100 + to.getDate() : null;
+                    if (fromDay !== null && day < fromDay) return false;
+                    if (toDay !== null && day > toDay) return false;
                     return true;
                 });
             }
@@ -825,7 +831,7 @@
             }
         }
 
-        // ====== ESCÁNER MEJORADO ======
+        // ESCÁNER MEJORADO (Nativo + Fallback)
         function openScanner() {
             document.getElementById('scanner-modal').classList.remove('hidden');
             setTimeout(startScanner, 300);
@@ -945,7 +951,7 @@
         document.getElementById('btn-scan-assign-code').addEventListener('click', () => { scannerTarget = 'assign'; openScanner(); });
         document.getElementById('btn-close-scanner').addEventListener('click', closeScanner);
 
-        // ====== EVENTOS DE FILTROS Y OTROS ======
+        // EVENTOS DE FILTROS Y OTROS
         document.getElementById('history-filter-user').addEventListener('change', (e) => {
             historyFilterUser = e.target.value;
             renderApp();
@@ -986,7 +992,7 @@
             renderApp();
         }
 
-        // Crear Usuario (admin)
+        // CREAR USUARIO
         document.getElementById('btn-create-user').addEventListener('click', async () => {
             const username = document.getElementById('new-username').value.trim().toLowerCase();
             const pin = document.getElementById('new-pin').value.trim();
@@ -1005,7 +1011,7 @@
             }
         });
 
-        // Editar Usuario (admin)
+        // EDITAR USUARIO
         window.openEditUserModal = (username) => {
             document.getElementById('edit-user-target-id').value = username;
             document.getElementById('edit-user-target-name').innerText = username;
@@ -1045,7 +1051,7 @@
             }
         };
 
-        // Asignar Guías con foto opcional
+        // ASIGNAR GUÍAS CON FOTO OPCIONAL
         const adminCameraInput = document.getElementById('assign-staged-camera');
         const adminPhotoPreview = document.getElementById('admin-photo-preview');
         const adminPhotoData = document.getElementById('admin-photo-data');
@@ -1135,7 +1141,7 @@
             }
         });
 
-        // Completar Entrega (colaborador)
+        // COMPLETAR ENTREGA
         window.openDeliveryModal = (id, code) => {
             document.getElementById('delivery-id').value = id;
             document.getElementById('delivery-package-code').innerText = code;
@@ -1189,7 +1195,7 @@
             }
         });
 
-        // Visor de fotos
+        // VISOR DE FOTOS
         window.viewPhoto = (src, title) => {
             document.getElementById('full-size-photo').src = src;
             document.getElementById('photo-viewer-info').innerText = title;
@@ -1200,7 +1206,7 @@
             document.getElementById('photo-viewer-modal').classList.add('hidden');
         });
 
-        // Borrado de Guías (admin)
+        // BORRADO DE GUÍAS
         window.confirmDeletePackage = (id, code) => {
             deleteTargetId = id;
             document.getElementById('delete-target-code').innerText = code;
@@ -1224,7 +1230,7 @@
             }
         });
 
-        // Navegación de pestañas principales
+        // NAVEGACIÓN
         document.getElementById('tab-pending').addEventListener('click', () => {
             document.getElementById('view-pending').classList.remove('hidden');
             document.getElementById('view-admin').classList.add('hidden');
@@ -1252,7 +1258,7 @@
             });
         }
 
-        // Navegación de subpestañas de administrador
+        // SUBPESTAÑAS ADMIN
         const subtabs = ['assign', 'users', 'history'];
         subtabs.forEach(tab => {
             document.getElementById(`subtab-${tab}`).addEventListener('click', () => {
@@ -1267,7 +1273,7 @@
             });
         });
 
-        // Inicializar al cargar si hay sesión
+        // INICIALIZAR
         if (savedUser) {
             initApp();
         }
